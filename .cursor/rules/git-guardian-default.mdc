@@ -1,0 +1,22 @@
+---
+description: Always run git-guardian workflow after subagent code changes
+alwaysApply: true
+---
+
+# Git Guardian Default Workflow
+
+After any subagent completes a task that may have modified files, run the `git-guardian` subagent before ending the turn.
+
+## Required sequence
+
+1. Detect whether files changed in the workspace.
+2. If changes exist, invoke `git-guardian` to handle:
+   - commit preparation and user confirmation
+   - push/pull confirmations
+   - repository bootstrap when no GitHub remote exists
+3. Do not auto-push without explicit user approval.
+4. If no files changed, skip commit flow and report "no changes to commit".
+
+## Commit source policy
+
+When preparing a commit, prioritize concise summaries from `logs/` subagent logs and include bilingual commit text (EN + RU) plus `Log source: <filename>`.

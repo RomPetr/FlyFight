@@ -1,0 +1,1 @@
+"""FlyFight game package."""
