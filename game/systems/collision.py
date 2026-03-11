@@ -171,21 +171,31 @@ def _resolve_pickups(
             continue
         bonuses.remove(bonus)
         effects.add_explosion(bonus.rect.centerx, bonus.rect.centery)
-        if sound:
-            sound.play_pickup()
         if bonus.bonus_type == "shield":
+            if sound:
+                sound.play_pickup()
             player_bonuses.shield_timer = 6.0
         elif bonus.bonus_type == "weapon":
+            if sound:
+                sound.play_weapon_upgrade_pickup()
             player_bonuses.weapon_timer = 7.0
         elif bonus.bonus_type == "strong_laser":
+            if sound:
+                sound.play_pickup()
             player_bonuses.strong_laser_timer = 9.0
             # Keep base weapon active while strong laser is active.
             player_bonuses.weapon_timer = max(player_bonuses.weapon_timer, 9.0)
         elif bonus.bonus_type == "score":
+            if sound:
+                sound.play_pickup()
             scoring.score_multiplier = min(2.4, scoring.score_multiplier + 0.25)
         elif bonus.bonus_type == "speed":
+            if sound:
+                sound.play_pickup()
             player_bonuses.speed_timer = 6.0
         elif bonus.bonus_type == "life":
+            if sound:
+                sound.play_pickup()
             scoring.lives = min(config.MAX_LIVES, scoring.lives + 1)
 
 

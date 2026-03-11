@@ -16,8 +16,10 @@ class SoundManager:
     def __init__(self) -> None:
         self._ok: bool = pygame.mixer.get_init() is not None
         self._shoot: pygame.mixer.Sound | None = None
+        self._shoot_blaster: pygame.mixer.Sound | None = None
         self._death: pygame.mixer.Sound | None = None
         self._pickup: pygame.mixer.Sound | None = None
+        self._pickup_weapon: pygame.mixer.Sound | None = None
         self._music_loaded: bool = False
         self.music_enabled: bool = True
         self.sfx_enabled: bool = True
@@ -28,16 +30,22 @@ class SoundManager:
             return
 
         self._shoot = self._load(config.SOUNDS_DIR / "shoot.wav")
+        self._shoot_blaster = self._load(config.SOUNDS_DIR / "mixkit-arcade-mechanical-bling-210.wav")
         self._death = self._load(config.SOUNDS_DIR / "death.wav")
         self._pickup = self._load(config.SOUNDS_DIR / "unlock_gift.wav")
+        self._pickup_weapon = self._load(config.SOUNDS_DIR / "attaching-a-blaster-to-create-more-powerful-weapons.wav")
         self._music_loaded = self._load_music(config.SOUNDS_DIR / "music.wav")
 
         if self._shoot:
             self._shoot.set_volume(0.55)
+        if self._shoot_blaster:
+            self._shoot_blaster.set_volume(0.65)
         if self._death:
             self._death.set_volume(0.9)
         if self._pickup:
             self._pickup.set_volume(0.8)
+        if self._pickup_weapon:
+            self._pickup_weapon.set_volume(0.85)
         if self._music_loaded:
             pygame.mixer.music.set_volume(0.45)
 
@@ -86,8 +94,13 @@ class SoundManager:
     # Sound-effect playback
     # ------------------------------------------------------------------
 
-    def play_shoot(self) -> None:
-        if self.sfx_enabled and self._shoot:
+    def play_shoot(self, weapon_level: int = 1) -> None:
+        if not self.sfx_enabled:
+            return
+        if weapon_level > 1 and self._shoot_blaster:
+            self._shoot_blaster.play()
+            return
+        if self._shoot:
             self._shoot.play()
 
     def play_death(self) -> None:
@@ -97,6 +110,10 @@ class SoundManager:
     def play_pickup(self) -> None:
         if self.sfx_enabled and self._pickup:
             self._pickup.play()
+
+    def play_weapon_upgrade_pickup(self) -> None:
+        if self.sfx_enabled and self._pickup_weapon:
+            self._pickup_weapon.play()
 
     # ------------------------------------------------------------------
     # Music control

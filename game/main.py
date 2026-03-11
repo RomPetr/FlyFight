@@ -307,7 +307,7 @@ def run() -> None:
                     player_shot.rect.height = 26
                     player_shot.rect.centerx = session.player.rect.centerx
                     player_shot.rect.bottom = session.player.rect.top
-                sound.play_shoot()
+                sound.play_shoot(session.player_bonuses.weapon_level)
                 session.bullets.append(player_shot)
                 if session.player_bonuses.weapon_level > 1:
                     side_damage = 2 if session.player_bonuses.weapon_level >= 3 else 1
