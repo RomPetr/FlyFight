@@ -20,6 +20,7 @@ class SoundManager:
         self._death: pygame.mixer.Sound | None = None
         self._pickup: pygame.mixer.Sound | None = None
         self._pickup_weapon: pygame.mixer.Sound | None = None
+        self._level_up: pygame.mixer.Sound | None = None
         self._music_loaded: bool = False
         self.music_enabled: bool = True
         self.sfx_enabled: bool = True
@@ -34,6 +35,7 @@ class SoundManager:
         self._death = self._load(config.SOUNDS_DIR / "death.wav")
         self._pickup = self._load(config.SOUNDS_DIR / "unlock_gift.wav")
         self._pickup_weapon = self._load(config.SOUNDS_DIR / "attaching-a-blaster-to-create-more-powerful-weapons.wav")
+        self._level_up = self._load(config.SOUNDS_DIR / "level_increased.wav")
         self._music_loaded = self._load_music(config.SOUNDS_DIR / "music.wav")
 
         if self._shoot:
@@ -46,6 +48,8 @@ class SoundManager:
             self._pickup.set_volume(0.8)
         if self._pickup_weapon:
             self._pickup_weapon.set_volume(0.85)
+        if self._level_up:
+            self._level_up.set_volume(0.9)
         if self._music_loaded:
             pygame.mixer.music.set_volume(0.45)
 
@@ -114,6 +118,10 @@ class SoundManager:
     def play_weapon_upgrade_pickup(self) -> None:
         if self.sfx_enabled and self._pickup_weapon:
             self._pickup_weapon.play()
+
+    def play_level_up(self) -> None:
+        if self.sfx_enabled and self._level_up:
+            self._level_up.play()
 
     # ------------------------------------------------------------------
     # Music control

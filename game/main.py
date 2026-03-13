@@ -19,7 +19,7 @@ from game.save.checkpoint import has_checkpoint, load_checkpoint, save_checkpoin
 from game.state_manager import GameState
 from game.systems.collision import PlayerBonuses, handle_collisions
 from game.systems.effects import EffectsSystem
-from game.systems.scoring import ScoringState, difficulty_multiplier
+from game.systems.scoring import ScoringState, difficulty_multiplier, process_level_ups
 from game.systems.sound import SoundManager
 from game.systems.spawner import SpawnDirector
 from game.ui.hud import draw_audio_toggles, draw_hud, draw_ship_health_bar
@@ -39,6 +39,7 @@ class GameSession:
     spawner: SpawnDirector
     autosave_timer: float = 0.0
     autosave_last_score: int = 0
+    level_banner_timer: float = 0.0
 
 
 def new_session() -> GameSession:
@@ -53,6 +54,7 @@ def new_session() -> GameSession:
         player_bonuses=PlayerBonuses(),
         effects=EffectsSystem(),
         spawner=SpawnDirector(),
+        level_banner_timer=2.4,
     )
 
 
@@ -67,6 +69,9 @@ def serialize_session(session: GameSession) -> dict[str, Any]:
             "score": session.scoring.score,
             "lives": session.scoring.lives,
             "health": session.scoring.health,
+            "level": session.scoring.level,
+            "level_step_score": session.scoring.level_step_score,
+            "next_level_score": session.scoring.next_level_score,
             "run_time_seconds": session.scoring.run_time_seconds,
             "score_multiplier": session.scoring.score_multiplier,
         },
@@ -131,6 +136,9 @@ def load_session(payload: dict[str, Any]) -> GameSession:
     session.scoring.score = int(scoring_data.get("score", 0))
     session.scoring.lives = int(scoring_data.get("lives", config.PLAYER_START_LIVES))
     session.scoring.health = float(scoring_data.get("health", 100.0))
+    session.scoring.level = int(scoring_data.get("level", 1))
+    session.scoring.level_step_score = int(scoring_data.get("level_step_score", config.LEVEL_UP_BASE_SCORE))
+    session.scoring.next_level_score = int(scoring_data.get("next_level_score", config.LEVEL_UP_BASE_SCORE))
     session.scoring.run_time_seconds = float(scoring_data.get("run_time_seconds", 0.0))
     session.scoring.score_multiplier = float(scoring_data.get("score_multiplier", 1.0))
 
@@ -171,6 +179,7 @@ def load_session(payload: dict[str, Any]) -> GameSession:
     session.spawner.asteroid_timer = float(spawner_data.get("asteroid_timer", 0.0))
     session.spawner.pickup_timer = float(spawner_data.get("pickup_timer", 0.0))
     session.autosave_last_score = int(payload.get("autosave_last_score", session.scoring.score))
+    session.level_banner_timer = 2.0
     return session
 
 
@@ -331,6 +340,7 @@ def run() -> None:
                 dt=dt,
                 run_time_seconds=session.scoring.run_time_seconds,
                 score=session.scoring.score,
+                level=session.scoring.level,
                 enemies=session.enemies,
                 asteroids=session.asteroids,
                 bonuses=session.bonuses,
@@ -363,6 +373,10 @@ def run() -> None:
                 player_bonuses=session.player_bonuses,
                 sound=sound,
             )
+            level_ups = process_level_ups(session.scoring)
+            if level_ups > 0:
+                session.level_banner_timer = 2.0
+                sound.play_level_up()
             session.effects.update(dt)
             save_if_needed(session)
 
@@ -373,6 +387,7 @@ def run() -> None:
 
         if state != GameState.PLAYING:
             session.effects.update(dt)
+        session.level_banner_timer = max(0.0, session.level_banner_timer - dt)
 
         # Animate starfield
         speed = 25 + int(difficulty_multiplier(session.scoring.run_time_seconds, session.scoring.score) * 8)
@@ -402,6 +417,8 @@ def run() -> None:
             health=session.scoring.health,
             elapsed_seconds=session.scoring.run_time_seconds,
             score_multiplier=session.scoring.score_multiplier,
+            level=session.scoring.level,
+            next_level_score=session.scoring.next_level_score,
         )
         draw_audio_toggles(
             surface=screen,
@@ -418,11 +435,13 @@ def run() -> None:
             t3 = small_font.render("Press C - Continue from checkpoint", True, config.COLOR_TEXT if has_checkpoint() else config.COLOR_WARNING)
             t4 = small_font.render("Move: WASD/Arrows | Shoot: Space", True, config.COLOR_TEXT)
             t5 = small_font.render("F1: Music ON/OFF | F2: Sound ON/OFF", True, config.COLOR_TEXT)
+            t6 = small_font.render("Levels: 1..5, each level +20% complexity", True, config.COLOR_TEXT)
             screen.blit(t1, (config.SCREEN_WIDTH // 2 - t1.get_width() // 2, 210))
             screen.blit(t2, (config.SCREEN_WIDTH // 2 - t2.get_width() // 2, 280))
             screen.blit(t3, (config.SCREEN_WIDTH // 2 - t3.get_width() // 2, 312))
             screen.blit(t4, (config.SCREEN_WIDTH // 2 - t4.get_width() // 2, 350))
             screen.blit(t5, (config.SCREEN_WIDTH // 2 - t5.get_width() // 2, 382))
+            screen.blit(t6, (config.SCREEN_WIDTH // 2 - t6.get_width() // 2, 414))
 
         if state == GameState.PAUSED:
             overlay = pygame.Surface((config.SCREEN_WIDTH, config.SCREEN_HEIGHT), pygame.SRCALPHA)
@@ -443,6 +462,16 @@ def run() -> None:
             screen.blit(label, (config.SCREEN_WIDTH // 2 - label.get_width() // 2, 245))
             screen.blit(score_text, (config.SCREEN_WIDTH // 2 - score_text.get_width() // 2, 290))
             screen.blit(hint, (config.SCREEN_WIDTH // 2 - hint.get_width() // 2, 325))
+
+        if state == GameState.PLAYING and session.level_banner_timer > 0.0:
+            alpha_ratio = min(1.0, session.level_banner_timer / 2.0)
+            level_text = menu_font.render(f"LEVEL {session.scoring.level}", True, (245, 245, 255))
+            banner = pygame.Surface((level_text.get_width() + 40, level_text.get_height() + 24), pygame.SRCALPHA)
+            banner.fill((20, 24, 45, int(170 * alpha_ratio)))
+            banner.blit(level_text, (20, 12))
+            x = config.SCREEN_WIDTH // 2 - banner.get_width() // 2
+            y = config.SCREEN_HEIGHT // 2 - banner.get_height() // 2
+            screen.blit(banner, (x, y))
 
         pygame.display.flip()
 

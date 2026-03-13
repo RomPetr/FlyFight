@@ -7,7 +7,7 @@ from game.entities.asteroid import Asteroid
 from game.entities.bonus import BonusPickup
 from game.entities.enemy import EnemyShip, TIER_ORDER
 from game.entities.mine import Mine
-from game.systems.scoring import difficulty_multiplier
+from game.systems.scoring import difficulty_multiplier, level_difficulty_multiplier
 
 
 class SpawnDirector:
@@ -19,23 +19,26 @@ class SpawnDirector:
         self.asteroid_rate = config.ASTEROID_BASE_RATE
         self.pickup_rate = config.PICKUP_BASE_RATE
 
-    def update_rates(self, run_time_seconds: float, score: int) -> None:
+    def update_rates(self, run_time_seconds: float, score: int, level: int) -> None:
         diff = difficulty_multiplier(run_time_seconds, score)
-        self.enemy_rate = config.ENEMY_BASE_RATE + diff * 0.13
-        self.asteroid_rate = config.ASTEROID_BASE_RATE + diff * 0.11
-        self.pickup_rate = config.PICKUP_BASE_RATE + diff * 0.06
+        level_scale = level_difficulty_multiplier(level)
+        ease = config.GLOBAL_DIFFICULTY_EASE
+        self.enemy_rate = (config.ENEMY_BASE_RATE + diff * 0.13) * level_scale * ease
+        self.asteroid_rate = (config.ASTEROID_BASE_RATE + diff * 0.11) * level_scale * ease
+        self.pickup_rate = (config.PICKUP_BASE_RATE + diff * 0.06) * level_scale * ease
 
     def update(
         self,
         dt: float,
         run_time_seconds: float,
         score: int,
+        level: int,
         enemies: list[EnemyShip],
         asteroids: list[Asteroid],
         bonuses: list[BonusPickup],
         mines: list[Mine],
     ) -> None:
-        self.update_rates(run_time_seconds, score)
+        self.update_rates(run_time_seconds, score, level)
         self.enemy_timer += dt
         self.asteroid_timer += dt
         self.pickup_timer += dt

@@ -1,0 +1,21 @@
+---
+description: Always create dated completion log after tasks
+alwaysApply: true
+---
+
+# Completion Log Requirement
+
+After completing any task, always create a report file with a brief overview of actions performed.
+
+## File naming
+
+- Use date and time in the filename.
+- Filename must end with the word `log`.
+- Example: `2026-03-09_22-10-05_sound_log.md`.
+
+## Minimum report content
+
+- Task objective.
+- Files created/modified.
+- What was implemented and why.
+- Any checks performed (lint/tests/run status if available).

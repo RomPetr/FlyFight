@@ -20,16 +20,25 @@ def draw_hud(
     health: float,
     elapsed_seconds: float,
     score_multiplier: float,
+    level: int,
+    next_level_score: int,
 ) -> None:
     score_text = font.render(f"Score: {score}", True, config.COLOR_TEXT)
     lives_text = font.render(f"Lives: {lives}", True, config.COLOR_TEXT)
     health_text = font.render(f"HP: {int(max(0, min(100, health)))}%", True, config.COLOR_TEXT)
+    level_text = font.render(f"Level: {level}/{config.MAX_LEVEL}", True, config.COLOR_TEXT)
     timer_text = font.render(f"ET: {format_time(elapsed_seconds)}", True, config.COLOR_TEXT)
+    if level < config.MAX_LEVEL:
+        progress_text = small_font.render(f"Next level at: {next_level_score}", True, (200, 215, 235))
+    else:
+        progress_text = small_font.render("Max level reached", True, (200, 235, 200))
     multi_text = small_font.render(f"x{score_multiplier:.2f}", True, (180, 255, 200))
 
     surface.blit(score_text, (16, 12))
     surface.blit(lives_text, (16, 44))
     surface.blit(health_text, (16, 76))
+    surface.blit(level_text, (16, 134))
+    surface.blit(progress_text, (16, 165))
     surface.blit(timer_text, (config.SCREEN_WIDTH - timer_text.get_width() - 16, 12))
     surface.blit(multi_text, (config.SCREEN_WIDTH - multi_text.get_width() - 16, 50))
 
