@@ -53,8 +53,8 @@ def handle_collisions(
     player_bonuses: PlayerBonuses,
     sound: SoundManager | None = None,
 ) -> None:
-    _resolve_player_bullets(bullets, enemies, asteroids, scoring, effects)
-    _resolve_enemy_bullets(bullets, player, scoring, effects, player_bonuses, sound)
+    _resolve_player_bullets(bullets, enemies, asteroids, mines, player, scoring, effects, player_bonuses, sound)
+    _resolve_enemy_bullets(bullets, player, mines, scoring, effects, player_bonuses, sound)
     _resolve_direct_collisions(player, enemies, asteroids, mines, scoring, effects, player_bonuses, sound)
     _resolve_pickups(player, bonuses, scoring, player_bonuses, effects, sound)
     _cleanup_offscreen(bullets, enemies, asteroids, bonuses, mines)
@@ -64,8 +64,12 @@ def _resolve_player_bullets(
     bullets: list[Bullet],
     enemies: list[EnemyShip],
     asteroids: list[Asteroid],
+    mines: list[Mine],
+    player: PlayerShip,
     scoring: ScoringState,
     effects: EffectsSystem,
+    player_bonuses: PlayerBonuses,
+    sound: SoundManager | None = None,
 ) -> None:
     for bullet in [b for b in bullets if b.from_player]:
         # Enemy hits
@@ -93,17 +97,51 @@ def _resolve_player_bullets(
                         effects.add_explosion(asteroid.rect.centerx, asteroid.rect.centery)
                         asteroids.remove(asteroid)
                     break
+            else:
+                for mine in list(mines):
+                    if bullet.rect.colliderect(mine.rect):
+                        if bullet in bullets:
+                            bullets.remove(bullet)
+                        _detonate_mine(
+                            mine,
+                            mines=mines,
+                            player=player,
+                            scoring=scoring,
+                            effects=effects,
+                            player_bonuses=player_bonuses,
+                            sound=sound,
+                        )
+                        break
 
 
 def _resolve_enemy_bullets(
     bullets: list[Bullet],
     player: PlayerShip,
+    mines: list[Mine],
     scoring: ScoringState,
     effects: EffectsSystem,
     player_bonuses: PlayerBonuses,
     sound: SoundManager | None = None,
 ) -> None:
     for bullet in [b for b in bullets if not b.from_player]:
+        exploded = False
+        for mine in list(mines):
+            if bullet.rect.colliderect(mine.rect):
+                if bullet in bullets:
+                    bullets.remove(bullet)
+                _detonate_mine(
+                    mine,
+                    mines=mines,
+                    player=player,
+                    scoring=scoring,
+                    effects=effects,
+                    player_bonuses=player_bonuses,
+                    sound=sound,
+                )
+                exploded = True
+                break
+        if exploded:
+            continue
         if bullet.rect.colliderect(player.rect):
             if bullet in bullets:
                 bullets.remove(bullet)
@@ -157,15 +195,13 @@ def _resolve_direct_collisions(
 
     for mine in list(mines):
         if player.rect.colliderect(mine.rect):
-            effects.add_explosion(mine.rect.centerx, mine.rect.centery, big=True, mine_style=True)
-            mines.remove(mine)
-            _damage_player(
-                player,
-                scoring,
-                effects,
-                player_bonuses,
-                damage_percent=100.0,
-                force_life_loss=True,
+            _detonate_mine(
+                mine,
+                mines=mines,
+                player=player,
+                scoring=scoring,
+                effects=effects,
+                player_bonuses=player_bonuses,
                 sound=sound,
             )
 
@@ -223,6 +259,34 @@ def _cleanup_offscreen(
     asteroids[:] = [a for a in asteroids if a.rect.top <= config.SCREEN_HEIGHT + 60]
     bonuses[:] = [b for b in bonuses if b.rect.top <= config.SCREEN_HEIGHT + 40]
     mines[:] = [m for m in mines if m.rect.top <= config.SCREEN_HEIGHT + 50]
+
+
+def _detonate_mine(
+    mine: Mine,
+    mines: list[Mine],
+    player: PlayerShip,
+    scoring: ScoringState,
+    effects: EffectsSystem,
+    player_bonuses: PlayerBonuses,
+    sound: SoundManager | None = None,
+) -> None:
+    if mine not in mines:
+        return
+    mines.remove(mine)
+    effects.add_mine_shatter(mine.rect.centerx, mine.rect.centery)
+
+    dx = player.rect.centerx - mine.rect.centerx
+    dy = player.rect.centery - mine.rect.centery
+    if dx * dx + dy * dy <= config.MINE_BLAST_RADIUS * config.MINE_BLAST_RADIUS:
+        _damage_player(
+            player,
+            scoring,
+            effects,
+            player_bonuses,
+            damage_percent=config.MINE_BLAST_DAMAGE_PERCENT,
+            force_life_loss=False,
+            sound=sound,
+        )
 
 
 def _damage_player(
