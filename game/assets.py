@@ -71,7 +71,7 @@ _ENEMY_USER_FILES = {
     "light":  "weak_enemy.png",
     "medium": "medium_enemy.png",
     "heavy":  "strong_enemy.png",
-    "elite":  "strong_enemy.png",
+    "elite":  "elite_enemy.png",
 }
 
 _ENEMY_SRX_FILES = {

@@ -34,7 +34,7 @@ ENEMY_TIER_CONFIG = {
     "light": {"hp": 1, "speed": 120.0, "points": 80, "size": 26, "shot_cd": 1.8},
     "medium": {"hp": 2, "speed": 95.0, "points": 180, "size": 34, "shot_cd": 1.5},
     "heavy": {"hp": 3, "speed": 75.0, "points": 380, "size": 42, "shot_cd": 1.3},
-    "elite": {"hp": 3, "speed": 65.0, "points": 700, "size": 50, "shot_cd": 1.1},
+    "elite": {"hp": 3, "speed": 65.0, "points": 700, "size": 58, "shot_cd": 1.1},
 }
 
 # Spawn pacing

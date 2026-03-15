@@ -107,7 +107,19 @@ def _resolve_enemy_bullets(
         if bullet.rect.colliderect(player.rect):
             if bullet in bullets:
                 bullets.remove(bullet)
-            _damage_player(player, scoring, effects, player_bonuses, damage_percent=20.0, sound=sound)
+            # Elite volley shots mark damage >=100 and remove one life instantly.
+            if bullet.damage >= 100:
+                _damage_player(
+                    player,
+                    scoring,
+                    effects,
+                    player_bonuses,
+                    damage_percent=100.0,
+                    force_life_loss=True,
+                    sound=sound,
+                )
+            else:
+                _damage_player(player, scoring, effects, player_bonuses, damage_percent=20.0, sound=sound)
 
 
 def _resolve_direct_collisions(

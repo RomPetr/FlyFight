@@ -349,9 +349,9 @@ def run() -> None:
 
             for enemy in session.enemies:
                 enemy.update(dt)
-                shot = enemy.try_shoot()
-                if shot:
-                    session.bullets.append(shot)
+                shots = enemy.try_shoot()
+                if shots:
+                    session.bullets.extend(shots)
             for asteroid in session.asteroids:
                 asteroid.update(dt)
             for bonus in session.bonuses:

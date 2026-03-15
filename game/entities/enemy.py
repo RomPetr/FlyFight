@@ -42,9 +42,9 @@ class EnemyShip:
         self.rect.y += int(self.speed * dt)
         self.shot_timer = max(0.0, self.shot_timer - dt)
 
-    def try_shoot(self) -> Bullet | None:
+    def try_shoot(self) -> list[Bullet]:
         if self.shot_timer > 0.0:
-            return None
+            return []
         self.shot_timer = self.shot_cd
         fire_chance_by_tier = {
             "light": 0.30,
@@ -53,11 +53,24 @@ class EnemyShip:
             "elite": 0.54,
         }
         if random.random() > fire_chance_by_tier.get(self.tier, 0.35):
-            return None
+            return []
+
+        if self.tier == "elite":
+            # 5-laser volley: two from each wing + one from the nose.
+            shots: list[Bullet] = []
+            offsets = (-18, -9, 0, 9, 18)
+            for dx in offsets:
+                bullet_rect = pygame.Rect(0, 0, 7, 18)
+                bullet_rect.centerx = self.rect.centerx + dx
+                bullet_rect.top = self.rect.bottom - 2
+                # damage=100 is treated as instant life loss on hit.
+                shots.append(Bullet(rect=bullet_rect, velocity_y=250.0, from_player=False, damage=100))
+            return shots
+
         bullet_rect = pygame.Rect(0, 0, 5, 13)
         bullet_rect.centerx = self.rect.centerx
         bullet_rect.top = self.rect.bottom
-        return Bullet(rect=bullet_rect, velocity_y=220.0, from_player=False, damage=1)
+        return [Bullet(rect=bullet_rect, velocity_y=220.0, from_player=False, damage=1)]
 
     def draw(self, surface: pygame.Surface) -> None:
         sprite = assets.get_enemy_ship(self.tier, self.rect.width)
