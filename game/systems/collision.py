@@ -38,7 +38,7 @@ class PlayerBonuses:
             self.weapon_level = 2
         else:
             self.weapon_level = 1
-        player.speed = config.PLAYER_SPEED * (1.25 if self.speed_timer > 0 else 1.0)
+        player.speed = config.PLAYER_SPEED * (1.45 if self.speed_timer > 0 else 1.0)
 
 
 def handle_collisions(
@@ -145,6 +145,9 @@ def _resolve_enemy_bullets(
         if bullet.rect.colliderect(player.rect):
             if bullet in bullets:
                 bullets.remove(bullet)
+            if _is_shield_active(player_bonuses):
+                effects.add_explosion(player.rect.centerx, player.rect.centery, big=False)
+                continue
             # Elite volley shots mark damage >=100 and remove one life instantly.
             if bullet.damage >= 100:
                 _damage_player(
@@ -172,6 +175,11 @@ def _resolve_direct_collisions(
 ) -> None:
     for enemy in list(enemies):
         if player.rect.colliderect(enemy.rect):
+            if _is_shield_active(player_bonuses):
+                _deflect_entity(enemy.rect, player.rect)
+                enemy.speed = -abs(enemy.speed)
+                effects.add_explosion(enemy.rect.centerx, enemy.rect.centery, big=False)
+                continue
             effects.add_explosion(enemy.rect.centerx, enemy.rect.centery, big=True)
             enemies.remove(enemy)
             enemy_collision_damage = {
@@ -184,6 +192,11 @@ def _resolve_direct_collisions(
 
     for asteroid in list(asteroids):
         if player.rect.colliderect(asteroid.rect):
+            if _is_shield_active(player_bonuses):
+                _deflect_entity(asteroid.rect, player.rect)
+                asteroid.speed = -abs(asteroid.speed)
+                effects.add_explosion(asteroid.rect.centerx, asteroid.rect.centery, mine_style=True)
+                continue
             effects.add_explosion(asteroid.rect.centerx, asteroid.rect.centery, mine_style=True)
             asteroids.remove(asteroid)
             asteroid_damage = {
@@ -195,6 +208,11 @@ def _resolve_direct_collisions(
 
     for mine in list(mines):
         if player.rect.colliderect(mine.rect):
+            if _is_shield_active(player_bonuses):
+                _deflect_entity(mine.rect, player.rect)
+                mine.speed = -abs(mine.speed)
+                effects.add_explosion(mine.rect.centerx, mine.rect.centery, mine_style=True)
+                continue
             _detonate_mine(
                 mine,
                 mines=mines,
@@ -222,17 +240,17 @@ def _resolve_pickups(
         if bonus.bonus_type == "shield":
             if sound:
                 sound.play_pickup()
-            player_bonuses.shield_timer = 6.0
+            player_bonuses.shield_timer = 15.0
         elif bonus.bonus_type == "weapon":
             if sound:
                 sound.play_weapon_upgrade_pickup()
-            player_bonuses.weapon_timer = 7.0
+            player_bonuses.weapon_timer = 15.0
         elif bonus.bonus_type == "strong_laser":
             if sound:
                 sound.play_pickup()
-            player_bonuses.strong_laser_timer = 9.0
+            player_bonuses.strong_laser_timer = 15.0
             # Keep base weapon active while strong laser is active.
-            player_bonuses.weapon_timer = max(player_bonuses.weapon_timer, 9.0)
+            player_bonuses.weapon_timer = max(player_bonuses.weapon_timer, 15.0)
         elif bonus.bonus_type == "score":
             if sound:
                 sound.play_pickup()
@@ -240,7 +258,7 @@ def _resolve_pickups(
         elif bonus.bonus_type == "speed":
             if sound:
                 sound.play_pickup()
-            player_bonuses.speed_timer = 6.0
+            player_bonuses.speed_timer = 15.0
         elif bonus.bonus_type == "life":
             if sound:
                 sound.play_pickup()
@@ -255,10 +273,22 @@ def _cleanup_offscreen(
     mines: list[Mine],
 ) -> None:
     bullets[:] = [b for b in bullets if -40 < b.rect.y < config.SCREEN_HEIGHT + 40]
-    enemies[:] = [e for e in enemies if e.rect.top <= config.SCREEN_HEIGHT + 60]
-    asteroids[:] = [a for a in asteroids if a.rect.top <= config.SCREEN_HEIGHT + 60]
+    enemies[:] = [e for e in enemies if -80 <= e.rect.top <= config.SCREEN_HEIGHT + 60]
+    asteroids[:] = [a for a in asteroids if -80 <= a.rect.top <= config.SCREEN_HEIGHT + 60]
     bonuses[:] = [b for b in bonuses if b.rect.top <= config.SCREEN_HEIGHT + 40]
-    mines[:] = [m for m in mines if m.rect.top <= config.SCREEN_HEIGHT + 50]
+    mines[:] = [m for m in mines if -80 <= m.rect.top <= config.SCREEN_HEIGHT + 50]
+
+
+def _is_shield_active(player_bonuses: PlayerBonuses) -> bool:
+    return player_bonuses.shield_timer > 0.0
+
+
+def _deflect_entity(entity_rect, player_rect) -> None:
+    if entity_rect.centerx < player_rect.centerx:
+        entity_rect.x -= 26
+    else:
+        entity_rect.x += 26
+    entity_rect.y = player_rect.top - entity_rect.height - 4
 
 
 def _detonate_mine(
@@ -301,7 +331,7 @@ def _damage_player(
     if player.invulnerable_time > 0.0:
         return
     if player_bonuses.shield_timer > 0.0:
-        player_bonuses.shield_timer = max(0.0, player_bonuses.shield_timer - 2.0)
+        # Shield gift grants full temporary invulnerability.
         return
     if force_life_loss:
         scoring.health = 0.0

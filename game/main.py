@@ -40,6 +40,8 @@ class GameSession:
     autosave_timer: float = 0.0
     autosave_last_score: int = 0
     level_banner_timer: float = 0.0
+    bg_scroll_x: float = 0.0
+    bg_scroll_y: float = 0.0
 
 
 def new_session() -> GameSession:
@@ -55,6 +57,8 @@ def new_session() -> GameSession:
         effects=EffectsSystem(),
         spawner=SpawnDirector(),
         level_banner_timer=2.4,
+        bg_scroll_x=0.0,
+        bg_scroll_y=0.0,
     )
 
 
@@ -189,10 +193,17 @@ def draw_scene(
     stars: list[tuple[int, int, int]],
     offset: tuple[int, int],
     bg: pygame.Surface | None = None,
+    bg_scroll: tuple[float, float] = (0.0, 0.0),
 ) -> None:
     scene = pygame.Surface((config.SCREEN_WIDTH, config.SCREEN_HEIGHT))
     if bg is not None:
-        scene.blit(bg, (0, 0))
+        bw, bh = bg.get_width(), bg.get_height()
+        sx = int(bg_scroll[0]) % bw
+        sy = int(bg_scroll[1]) % bh
+        scene.blit(bg, (-sx, -sy))
+        scene.blit(bg, (bw - sx, -sy))
+        scene.blit(bg, (-sx, bh - sy))
+        scene.blit(bg, (bw - sx, bh - sy))
     else:
         scene.fill(config.COLOR_BG)
 
@@ -305,7 +316,13 @@ def run() -> None:
             session.scoring.run_time_seconds += dt
             session.autosave_timer += dt
             session.player_bonuses.update(dt, session.player)
+            prev_x, prev_y = session.player.rect.centerx, session.player.rect.centery
             session.player.update(dt, pressed)
+            dx = session.player.rect.centerx - prev_x
+            dy = session.player.rect.centery - prev_y
+            # Parallax illusion: background drifts opposite to player movement.
+            session.bg_scroll_x -= dx * 0.35
+            session.bg_scroll_y -= dy * 0.22
             session.scoring.score_multiplier = max(1.0, session.scoring.score_multiplier - dt * 0.02)
 
             player_shot = session.player.try_shoot(pressed)
@@ -401,7 +418,7 @@ def run() -> None:
         stars = animated_stars
 
         offset = session.effects.screen_offset()
-        draw_scene(screen, session, stars, offset, background)
+        draw_scene(screen, session, stars, offset, background, (session.bg_scroll_x, session.bg_scroll_y))
         if session.effects.flash_time > 0:
             flash = pygame.Surface((config.SCREEN_WIDTH, config.SCREEN_HEIGHT), pygame.SRCALPHA)
             flash_alpha = int(120 * (session.effects.flash_time / 0.08))

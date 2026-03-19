@@ -21,6 +21,7 @@ _ROOT = Path(__file__).parent.parent
 _PNG = _ROOT / "SpaceShooterRedux" / "PNG"
 _BG = _ROOT / "SpaceShooterRedux" / "Backgrounds"
 _IMAGES = _ROOT / "game" / "assets" / "images"
+_USER_IMAGES = _ROOT / "IMAGES"
 
 # Simple path+size+flip key → Surface (or None on failure)
 _cache: dict[str, Optional[pygame.Surface]] = {}
@@ -52,13 +53,31 @@ def _load(
     return _cache[key]
 
 
+def _load_from_user_layers(
+    relative_name: str,
+    size: tuple[int, int] | None = None,
+    flip_v: bool = False,
+) -> Optional[pygame.Surface]:
+    """Try game/assets/images first, then IMAGES root."""
+    return _load(_IMAGES / relative_name, size, flip_v) or _load(_USER_IMAGES / relative_name, size, flip_v)
+
+
+def _first_existing_by_patterns(patterns: list[str]) -> Path | None:
+    for pattern in patterns:
+        for folder in (_IMAGES, _USER_IMAGES):
+            matches = sorted(folder.glob(pattern))
+            if matches:
+                return matches[0]
+    return None
+
+
 # ---------------------------------------------------------------------------
 # Player ship
 # ---------------------------------------------------------------------------
 
 def get_player_ship(width: int, height: int) -> Optional[pygame.Surface]:
     return (
-        _load(_IMAGES / "ship.png", (width, height))
+        _load_from_user_layers("ship.png", (width, height))
         or _load(_PNG / "playerShip1_blue.png", (width, height))
     )
 
@@ -86,7 +105,7 @@ def get_enemy_ship(tier: str, size: int) -> Optional[pygame.Surface]:
     user_file = _ENEMY_USER_FILES.get(tier)
     srx_file = _ENEMY_SRX_FILES.get(tier, "enemyBlue1.png")
     return (
-        (user_file and _load(_IMAGES / user_file, (size, size)))
+        (user_file and _load_from_user_layers(user_file, (size, size)))
         or _load(_PNG / "Enemies" / srx_file, (size, size))
     )
 
@@ -130,6 +149,8 @@ def pick_meteor_name(size: int) -> str:
 
     if (_IMAGES / preferred).exists():
         return preferred
+    if (_USER_IMAGES / preferred).exists():
+        return preferred
 
     # Fallback to legacy SpaceShooterRedux meteor variants.
     if size >= 45:
@@ -145,8 +166,8 @@ def pick_meteor_name(size: int) -> str:
 
 def get_meteor(filename: str, width: int, height: int) -> Optional[pygame.Surface]:
     return (
-        _load(_IMAGES / filename, (width, height))
-        or _load(_IMAGES / "meteors.png", (width, height))
+        _load_from_user_layers(filename, (width, height))
+        or _load_from_user_layers("meteors.png", (width, height))
         or _load(_PNG / "Meteors" / filename, (width, height))
     )
 
@@ -157,7 +178,7 @@ def get_meteor(filename: str, width: int, height: int) -> Optional[pygame.Surfac
 
 def get_player_laser(width: int, height: int) -> Optional[pygame.Surface]:
     return (
-        _load(_IMAGES / "rockets.png", (width, height))
+        _load_from_user_layers("rockets.png", (width, height))
         or _load(_PNG / "Lasers" / "laserBlue01.png", (width, height))
     )
 
@@ -182,11 +203,26 @@ _BONUS_FILES = {
 
 
 def get_bonus(bonus_type: str, width: int, height: int) -> Optional[pygame.Surface]:
+    # User-provided gifts from IMAGES folder (with long localized names)
+    special_patterns = {
+        "shield": ["gpt-image-1.5_1*"],
+        "weapon": ["gpt-image-1.5_2*"],
+        "strong_laser": ["gpt-image-1.5_2*"],
+        "speed": ["gpt-image-1.5_3*"],
+    }
+    patterns = special_patterns.get(bonus_type)
+    if patterns:
+        candidate = _first_existing_by_patterns(patterns)
+        if candidate:
+            sprite = _load(candidate, (width, height))
+            if sprite is not None:
+                return sprite
+
     filename = _BONUS_FILES.get(bonus_type)
     if not filename:
         return None
     return (
-        _load(_IMAGES / filename, (width, height))
+        _load_from_user_layers(filename, (width, height))
         or _load(_PNG / "Power-ups" / filename, (width, height))
     )
 
@@ -196,7 +232,7 @@ def get_bonus(bonus_type: str, width: int, height: int) -> Optional[pygame.Surfa
 # ---------------------------------------------------------------------------
 
 def get_mine(width: int, height: int) -> Optional[pygame.Surface]:
-    return _load(_IMAGES / "mine1.png", (width, height))
+    return _load_from_user_layers("mine1.png", (width, height))
 
 
 # ---------------------------------------------------------------------------
@@ -205,7 +241,7 @@ def get_mine(width: int, height: int) -> Optional[pygame.Surface]:
 
 def get_explosion(name: str, width: int, height: int) -> Optional[pygame.Surface]:
     """name is 'explosion1' or 'explosion2'."""
-    return _load(_IMAGES / f"{name}.png", (width, height))
+    return _load_from_user_layers(f"{name}.png", (width, height)) or _load_from_user_layers(f"{name}.jpg", (width, height))
 
 
 # ---------------------------------------------------------------------------
@@ -213,4 +249,4 @@ def get_explosion(name: str, width: int, height: int) -> Optional[pygame.Surface
 # ---------------------------------------------------------------------------
 
 def get_background(width: int, height: int) -> Optional[pygame.Surface]:
-    return _load(_BG / "darkPurple.png", (width, height))
+    return _load(_USER_IMAGES / "bkgd_0.png", (width, height)) or _load(_BG / "darkPurple.png", (width, height))
