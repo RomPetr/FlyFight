@@ -170,8 +170,12 @@ def load_session(payload: dict[str, Any]) -> GameSession:
     for a in entities.get("asteroids", []):
         rect = pygame.Rect(int(a["x"]), int(a["y"]), int(a["w"]), int(a["h"]))
         session.asteroids.append(Asteroid(rect=rect, speed=float(a["speed"]), hp=int(a["hp"])))
+    allowed_bonus_types = {"shield", "strong_laser", "speed"}
     for p in entities.get("bonuses", []):
-        bonus = BonusPickup.create(str(p["type"]), int(p["x"]))
+        bonus_type = str(p["type"])
+        if bonus_type not in allowed_bonus_types:
+            continue
+        bonus = BonusPickup.create(bonus_type, int(p["x"]))
         bonus.rect.y = int(p["y"])
         session.bonuses.append(bonus)
     for m in entities.get("mines", []):
@@ -190,6 +194,7 @@ def load_session(payload: dict[str, Any]) -> GameSession:
 def draw_scene(
     surface: pygame.Surface,
     session: GameSession,
+    player_bonuses: PlayerBonuses,
     stars: list[tuple[int, int, int]],
     offset: tuple[int, int],
     bg: pygame.Surface | None = None,
@@ -221,6 +226,13 @@ def draw_scene(
     for bullet in session.bullets:
         bullet.draw(scene)
     session.player.draw(scene)
+    if player_bonuses.shield_timer > 0.0:
+        shield_surface = pygame.Surface((96, 96), pygame.SRCALPHA)
+        # 50% transparent lilac protective field.
+        pygame.draw.circle(shield_surface, (180, 120, 255, 128), (48, 48), 38)
+        pygame.draw.circle(shield_surface, (235, 210, 255, 170), (48, 48), 38, width=3)
+        shield_rect = shield_surface.get_rect(center=session.player.rect.center)
+        scene.blit(shield_surface, shield_rect)
     draw_ship_health_bar(scene, session.player.rect, session.scoring.health)
     session.effects.draw(scene)
 
@@ -418,7 +430,15 @@ def run() -> None:
         stars = animated_stars
 
         offset = session.effects.screen_offset()
-        draw_scene(screen, session, stars, offset, background, (session.bg_scroll_x, session.bg_scroll_y))
+        draw_scene(
+            screen,
+            session,
+            session.player_bonuses,
+            stars,
+            offset,
+            background,
+            (session.bg_scroll_x, session.bg_scroll_y),
+        )
         if session.effects.flash_time > 0:
             flash = pygame.Surface((config.SCREEN_WIDTH, config.SCREEN_HEIGHT), pygame.SRCALPHA)
             flash_alpha = int(120 * (session.effects.flash_time / 0.08))

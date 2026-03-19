@@ -5,7 +5,7 @@ import pygame
 
 from game import assets, config
 
-BONUS_TYPES = ("shield", "weapon", "strong_laser", "score", "speed", "life")
+BONUS_TYPES = ("shield", "strong_laser", "speed")
 
 
 @dataclass
@@ -16,7 +16,9 @@ class BonusPickup:
 
     @classmethod
     def create(cls, bonus_type: str, x_position: int) -> "BonusPickup":
-        rect = pygame.Rect(x_position, -20, 20, 20)
+        # 30% larger for clearer recognition on the field.
+        size = 26
+        rect = pygame.Rect(x_position, -size, size, size)
         return cls(bonus_type=bonus_type, rect=rect)
 
     def update(self, dt: float) -> None:

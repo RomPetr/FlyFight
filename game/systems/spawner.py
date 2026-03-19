@@ -80,9 +80,9 @@ class SpawnDirector:
 
         # Gifts/bonuses. Extra life is intentionally rare.
         bonus_type = random.choices(
-            ["shield", "weapon", "strong_laser", "score", "speed", "life"],
+            ["shield", "strong_laser", "speed"],
             # Priority by design: shield > enhanced weapon > maneuverability.
-            weights=[0.34, 0.06, 0.27, 0.08, 0.22, 0.03],
+            weights=[0.5, 0.32, 0.18],
             k=1,
         )[0]
         bonuses.append(BonusPickup.create(bonus_type=bonus_type, x_position=x))

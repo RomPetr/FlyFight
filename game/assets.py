@@ -71,6 +71,31 @@ def _first_existing_by_patterns(patterns: list[str]) -> Path | None:
     return None
 
 
+def _strip_flat_background(sprite: pygame.Surface, tolerance: int = 26) -> pygame.Surface:
+    """Remove near-uniform JPEG-style background using corner colors."""
+    img = sprite.convert_alpha()
+    w, h = img.get_width(), img.get_height()
+    corners = [
+        img.get_at((0, 0)),
+        img.get_at((w - 1, 0)),
+        img.get_at((0, h - 1)),
+        img.get_at((w - 1, h - 1)),
+    ]
+
+    for y in range(h):
+        for x in range(w):
+            px = img.get_at((x, y))
+            for ref in corners:
+                if (
+                    abs(px.r - ref.r) <= tolerance
+                    and abs(px.g - ref.g) <= tolerance
+                    and abs(px.b - ref.b) <= tolerance
+                ):
+                    img.set_at((x, y), (0, 0, 0, 0))
+                    break
+    return img
+
+
 # ---------------------------------------------------------------------------
 # Player ship
 # ---------------------------------------------------------------------------
@@ -206,7 +231,6 @@ def get_bonus(bonus_type: str, width: int, height: int) -> Optional[pygame.Surfa
     # User-provided gifts from IMAGES folder (with long localized names)
     special_patterns = {
         "shield": ["gpt-image-1.5_1*"],
-        "weapon": ["gpt-image-1.5_2*"],
         "strong_laser": ["gpt-image-1.5_2*"],
         "speed": ["gpt-image-1.5_3*"],
     }
@@ -216,15 +240,18 @@ def get_bonus(bonus_type: str, width: int, height: int) -> Optional[pygame.Surfa
         if candidate:
             sprite = _load(candidate, (width, height))
             if sprite is not None:
-                return sprite
+                return _strip_flat_background(sprite)
 
     filename = _BONUS_FILES.get(bonus_type)
     if not filename:
         return None
-    return (
+    fallback = (
         _load_from_user_layers(filename, (width, height))
         or _load(_PNG / "Power-ups" / filename, (width, height))
     )
+    if fallback is None:
+        return None
+    return _strip_flat_background(fallback)
 
 
 # ---------------------------------------------------------------------------
