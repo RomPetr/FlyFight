@@ -16,8 +16,8 @@ class BonusPickup:
 
     @classmethod
     def create(cls, bonus_type: str, x_position: int) -> "BonusPickup":
-        # 30% larger for clearer recognition on the field.
-        size = 26
+        # Increased by another 30% from the previous size.
+        size = 34
         rect = pygame.Rect(x_position, -size, size, size)
         return cls(bonus_type=bonus_type, rect=rect)
 
