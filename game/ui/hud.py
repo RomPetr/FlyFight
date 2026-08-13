@@ -51,21 +51,20 @@ def draw_hud(
     pygame.draw.rect(surface, (220, 230, 245), bar_bg, width=2, border_radius=6)
 
 
-def _draw_toggle(
+def _draw_button(
     surface: pygame.Surface,
     font: pygame.font.Font,
     rect: pygame.Rect,
-    label: str,
-    is_on: bool,
+    text: str,
+    is_active: bool,
 ) -> None:
     bg_on = (40, 145, 80)
     bg_off = (145, 45, 55)
     border = (225, 235, 250)
     text_color = (245, 250, 255)
 
-    pygame.draw.rect(surface, bg_on if is_on else bg_off, rect, border_radius=10)
+    pygame.draw.rect(surface, bg_on if is_active else bg_off, rect, border_radius=10)
     pygame.draw.rect(surface, border, rect, width=2, border_radius=10)
-    text = f"{label} {'ON' if is_on else 'OFF'}"
     text_surface = font.render(text, True, text_color)
     tx = rect.centerx - text_surface.get_width() // 2
     ty = rect.centery - text_surface.get_height() // 2
@@ -77,11 +76,13 @@ def draw_audio_toggles(
     font: pygame.font.Font,
     music_rect: pygame.Rect,
     sound_rect: pygame.Rect,
-    music_on: bool,
+    music_label: str,
     sound_on: bool,
 ) -> None:
-    _draw_toggle(surface, font, music_rect, "Music", music_on)
-    _draw_toggle(surface, font, sound_rect, "Sound", sound_on)
+    music_active = music_label != "Music Off"
+    _draw_button(surface, font, music_rect, music_label, music_active)
+    sound_text = f"Sound {'ON' if sound_on else 'OFF'}"
+    _draw_button(surface, font, sound_rect, sound_text, sound_on)
 
 
 def draw_ship_health_bar(surface: pygame.Surface, ship_rect: pygame.Rect, health: float) -> None:

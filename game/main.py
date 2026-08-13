@@ -250,9 +250,10 @@ def save_if_needed(session: GameSession) -> None:
     session.autosave_last_score = session.scoring.score
 
 
-def get_audio_toggle_rects() -> tuple[pygame.Rect, pygame.Rect]:
-    music_rect = pygame.Rect(config.SCREEN_WIDTH - 236, 78, 108, 34)
+def get_audio_toggle_rects(music_label: str, font: pygame.font.Font) -> tuple[pygame.Rect, pygame.Rect]:
+    music_width = max(108, font.size(music_label)[0] + 24)
     sound_rect = pygame.Rect(config.SCREEN_WIDTH - 118, 78, 108, 34)
+    music_rect = pygame.Rect(sound_rect.left - music_width - 10, 78, music_width, 34)
     return music_rect, sound_rect
 
 
@@ -277,13 +278,13 @@ def run() -> None:
     running = True
     while running:
         dt = min(0.033, clock.tick(config.FPS) / 1000.0)
-        music_rect, sound_rect = get_audio_toggle_rects()
+        music_rect, sound_rect = get_audio_toggle_rects(sound.music_button_label, small_font)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_F1:
-                    sound.toggle_music(should_play_now=(state == GameState.PLAYING))
+                    sound.cycle_music(should_play_now=(state == GameState.PLAYING))
                 elif event.key == pygame.K_F2:
                     sound.toggle_sfx()
                 if event.key == pygame.K_ESCAPE:
@@ -318,7 +319,7 @@ def run() -> None:
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 mouse_pos = event.pos
                 if music_rect.collidepoint(mouse_pos):
-                    sound.toggle_music(should_play_now=(state == GameState.PLAYING))
+                    sound.cycle_music(should_play_now=(state == GameState.PLAYING))
                 elif sound_rect.collidepoint(mouse_pos):
                     sound.toggle_sfx()
 
@@ -462,7 +463,7 @@ def run() -> None:
             font=small_font,
             music_rect=music_rect,
             sound_rect=sound_rect,
-            music_on=sound.music_enabled,
+            music_label=sound.music_button_label,
             sound_on=sound.sfx_enabled,
         )
 
@@ -471,7 +472,7 @@ def run() -> None:
             t2 = small_font.render("Press N - New Game", True, config.COLOR_TEXT)
             t3 = small_font.render("Press C - Continue from checkpoint", True, config.COLOR_TEXT if has_checkpoint() else config.COLOR_WARNING)
             t4 = small_font.render("Move: WASD/Arrows | Shoot: Space", True, config.COLOR_TEXT)
-            t5 = small_font.render("F1: Music ON/OFF | F2: Sound ON/OFF", True, config.COLOR_TEXT)
+            t5 = small_font.render("F1: Cycle Music | F2: Sound ON/OFF", True, config.COLOR_TEXT)
             t6 = small_font.render("Levels: 1..5, each level +20% complexity", True, config.COLOR_TEXT)
             screen.blit(t1, (config.SCREEN_WIDTH // 2 - t1.get_width() // 2, 210))
             screen.blit(t2, (config.SCREEN_WIDTH // 2 - t2.get_width() // 2, 280))

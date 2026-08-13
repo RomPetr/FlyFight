@@ -62,6 +62,7 @@ MINE_BLAST_DAMAGE_PERCENT = 10.0
 
 # Audio
 SOUNDS_DIR = Path("SoundExamples")
+MUSIC_VOLUME = 0.45
 
 # Save system
 SAVE_DIR = Path("save_data")
