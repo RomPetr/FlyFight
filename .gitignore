@@ -1,6 +1,6 @@
 __pycache__/
 *.pyc
 save_data/
-IMAGES/
+/IMAGES/
 # SoundExamples/
 .cursor/rules/git-guardian-default.mdc
